@@ -1,0 +1,41 @@
+use admin;
+create table aunt
+(
+ID_aunt int not null auto_increment primary key,
+login varchar (30) not null,
+pass varchar (30) not null
+);
+insert into aunt(login, pass)
+values ('admin','admin'),('admin1','admin1');
+select * from admin.aunt;
+
+use admin;
+create table handlers
+(
+id int not null auto_increment primary key,
+name_handler varchar (100) not null,
+status int not null DEFAULT 1  -- status = 1 - хендлер включён, status = 0 - хендлер выключен
+);
+insert into handlers(name_handler)
+values ("/add"), ("/delete"),("/insert");
+select * from admin.handlers;
+
+use admin;
+create table token
+(
+id int not null auto_increment primary key,
+token varchar (150) not null
+);
+
+
+
+use admin;
+create table log
+(
+ID_log int not null auto_increment primary key,
+admin_id int not null,
+handler varchar (150) not null,
+request_content varchar (150) not null
+);
+
+
