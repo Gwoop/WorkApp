@@ -1,14 +1,13 @@
 package main
 
 import (
-	"AdminSimpleApi/Structs"
 	"github.com/ddosify/go-faker/faker"
 	"github.com/satori/go.uuid"
 	"math/rand"
 )
 
-func FakeData() Structs.User {
-	userst := Structs.User{}
+func FakeData() User {
+	userst := User{}
 	faker := faker.NewFaker()                       //создание экземпляра объекта faker для подставных данных
 	userst.Name = faker.RandomPersonFirstName()     //генерация подставного имяни
 	userst.Lastname = faker.RandomPersonFirstName() //генерация подставной фамилии
@@ -25,8 +24,6 @@ func Uuid() uuid.UUID {
 	var err error
 	u1 := uuid.Must(uuid.NewV4(), err)
 	if err != nil {
-
 	}
-
 	return u1
 }

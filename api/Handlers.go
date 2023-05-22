@@ -1,18 +1,27 @@
 package main
 
 import (
-	"AdminSimpleApi/Structs"
-	"AdminSimpleApi/cmd/security"
+	"WorkApp/api/security"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/shirou/gopsutil/v3/mem"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"time"
 )
 
-//хэндлел для авторизации
+var (
+	zag   = 0
+	n     = 1
+	maxn  = 0
+	count = 0
+)
+
+// хэндлел для авторизации
 func AuthorizationAdmin(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		login, password, ok := r.BasicAuth() //инициализация базовой авторизации
@@ -30,12 +39,15 @@ func AuthorizationAdmin(handler http.HandlerFunc) http.HandlerFunc {
 		//проверка логина и пароля администратора из базы данных
 		rows, err := db.Query("select * from admin.aunt")
 		for rows.Next() {
-			p := Structs.Admin{}
-			erro := rows.Scan(&p.Id, &p.Login, &p.Password)
+			p := Admin{}
+			erro := rows.Scan(&p.Id, &p.Login, &p.Password, &p.Token)
 			if erro != nil {
 				fmt.Println(erro)
 				continue
 			}
+			//if login == p.Login && password == p.Password {
+			//
+			//}
 			if login != p.Login || password != p.Password {
 				(w).WriteHeader(http.StatusUnauthorized)
 				json.NewEncoder(w).Encode("Ошибка ввода данных (логин или пароль не верны)")
@@ -47,7 +59,163 @@ func AuthorizationAdmin(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-//хэндлер для добавления тестовых пользователей
+func Testingbd(w http.ResponseWriter, r *http.Request) {
+	Sqlconnectionmarlo("marlo")
+
+	(w).WriteHeader(http.StatusOK)
+	vars := mux.Vars(r)
+	procentflouat, _ := strconv.ParseFloat(vars["proc"], 8)
+	println(vars["proc"])
+	var s string = vars["sost"]
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		panic(err)
+	}
+	zag = i
+	go bd(procentflouat)
+}
+
+func CloseTesting(w http.ResponseWriter, r *http.Request) {
+	(w).WriteHeader(http.StatusOK)
+	vars := mux.Vars(r)
+	var s string = vars["sost"]
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		panic(err)
+	}
+	zag = i
+}
+
+//2023-01-26 09:35:29.544323 active_thread: 10 max_thread: 10 sended_request: 44
+func logingtxt() {
+
+	today := time.Now().String()
+	//fmt.Println(today)
+	dt := time.Now()
+
+	t := strconv.Itoa(n)
+	tmax := strconv.Itoa(maxn)
+	tcount := strconv.Itoa(count)
+
+	text := today + " active_thread: " + t + " max_thread: " + tmax + " sended_request: " + tcount + "\n"
+	//file, err := os.Create("hello.txt")  D:\GGWP\WorkApp\logs
+	//file.Close()
+
+	var path string = "logs/" + dt.Format("01-02-2006") + ".txt"
+
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+
+	if err != nil {
+		fmt.Println("Unable to create file:", err)
+		os.Exit(1)
+	}
+	defer f.Close()
+	f.WriteString(text) //
+}
+
+func bd(procentflouat float64) {
+	println(procentflouat)
+	n = 2
+	count = 0
+	maxn = 0
+	for zag == 1 {
+		v, _ := mem.VirtualMemory()
+		if v.UsedPercent == procentflouat {
+			n--
+			print("--")
+		}
+		if v.UsedPercent <= procentflouat {
+			n++
+			print("++")
+		}
+		if n == 0 {
+			n++
+			print("00")
+		}
+		if maxn < n {
+			maxn = n
+		}
+		for i := 0; i < n; i++ {
+
+			//println(v.UsedPercent)
+
+			go test()
+
+			//go theads(true)
+		}
+	}
+
+}
+func test() {
+
+	println(n)
+	logingtxt()
+	//logingtxt()
+}
+
+func theads(zag bool) {
+
+	count = 0
+	for zag {
+		//println("Горутины работают!!!!!!!")
+
+		var err error
+		defer db.Close()
+
+		// Create a table
+		_, err = db.Exec("CREATE TABLE IF NOT EXISTS test_table (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(50) NOT NULL, PRIMARY KEY (id));")
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		// Insert some data
+		stmt, err := db.Prepare("INSERT INTO test_table (name) VALUES (?)")
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		defer stmt.Close()
+
+		for i := 0; i < 100; i++ {
+			_, err = stmt.Exec("Name")
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+		}
+		rows, err := db.Query("SELECT * FROM test_table")
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id int
+			var name string
+			err = rows.Scan(&id, &name)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+			fmt.Println(id, name)
+		}
+		count++
+		logingtxt()
+	}
+}
+
+func GetHardwareData(w http.ResponseWriter, r *http.Request) {
+	v, _ := mem.VirtualMemory()
+
+	// almost every return value is a struct
+	fmt.Printf("Total: %v, Free:%v, UsedPercent:%f%%\n", v.Total, v.Free, v.UsedPercent)
+	// convert to JSON. String() is also implemented
+	fmt.Println(v)
+
+}
+
+// хэндлер для добавления тестовых пользователей
 func AddUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -67,12 +235,12 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	var id, _ = result.LastInsertId()
-	json.NewEncoder(w).Encode(Structs.ResponsesUser{Id: id, Login: userst.Tel, Password: userst.Password}) // отправка ответа пользователю
-	fmt.Println(result.LastInsertId())                                                                     // id добавленного объекта
-	fmt.Println(result.RowsAffected())                                                                     // количество затронутых строк
+	json.NewEncoder(w).Encode(ResponsesUser{Id: id, Login: userst.Tel, Password: userst.Password}) // отправка ответа пользователю
+	fmt.Println(result.LastInsertId())                                                             // id добавленного объекта
+	fmt.Println(result.RowsAffected())                                                             // количество затронутых строк
 }
 
-//хэндлер для получения всех шаблонов
+// хэндлер для получения всех шаблонов
 func Getdockspattern(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	Sqlconnectionmarlo("marlo")
@@ -82,8 +250,8 @@ func Getdockspattern(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	docc := Structs.ResponsesDockpattern{}
-	doc := []Structs.ResponsesDockpattern{}
+	docc := ResponsesDockpattern{}
+	doc := []ResponsesDockpattern{}
 	for rows.Next() {
 		rows.Scan(&docc.Id, &docc.Name, &docc.Description, &docc.Uuid, &docc.Create_date)
 		//json.NewEncoder(w).Encode(&doc)
@@ -92,12 +260,21 @@ func Getdockspattern(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(&doc)
 }
 
-//хэндлер для добавления Шаблона документов
+func AuthorizationReturn(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	message := map[string]interface{}{
+		"answer": true,
+	}
+
+	json.NewEncoder(w).Encode(message)
+}
+
+// хэндлер для добавления Шаблона документов
 func Adddockpattern(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	//response := Structs.ResponsesSytem{}
 	res := ""
-	var requestdockpattern Structs.RequestDockpattern
+	var requestdockpattern RequestDockpattern
 	_ = json.NewDecoder(r.Body).Decode(&requestdockpattern)
 
 	fmt.Println(requestdockpattern.Name)
@@ -110,19 +287,19 @@ func Adddockpattern(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 
 		res = "Ошибка данных" + err.Error()
-		ResponsesUser(w, res)
+		ResponsesUserfunc(w, res)
 
 		//response.Responses = "Ошибка данных " + err.Error()
 		//json.NewEncoder(w).Encode(&response)
 		return
 	}
 	res = "Данные успешно добавлены"
-	ResponsesUser(w, res)
+	ResponsesUserfunc(w, res)
 	//response.Responses = "Данные успешно добавлены"
 	//json.NewEncoder(w).Encode(&response)
 }
 
-//хэндлер для удаления Шаблона документов
+// хэндлер для удаления Шаблона документов
 func Deletedockpattern(w http.ResponseWriter, r *http.Request) {
 	res := ""
 	vars := mux.Vars(r)
@@ -135,18 +312,18 @@ func Deletedockpattern(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(vars["id"])
 	if err != nil {
 		res = "Ошибка данных" + err.Error()
-		ResponsesUser(w, res)
+		ResponsesUserfunc(w, res)
 		return
 	}
 	res = "Данные успешно удалены или их не было"
-	ResponsesUser(w, res)
+	ResponsesUserfunc(w, res)
 }
 
 func Searchdockspattern(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	Sqlconnectionmarlo("marlo")
 
-	var requestsearchdock Structs.RequestsearchDock
+	var requestsearchdock RequestsearchDock
 	_ = json.NewDecoder(r.Body).Decode(&requestsearchdock)
 
 	rows, err := db.Query("SELECT * FROM document WHERE name= ?", requestsearchdock.Namedoc)
@@ -155,7 +332,7 @@ func Searchdockspattern(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		doc := Structs.ResponsesDockpattern{}
+		doc := ResponsesDockpattern{}
 		rows.Scan(&doc.Id, &doc.Name, &doc.Description, &doc.Uuid, &doc.Create_date)
 		json.NewEncoder(w).Encode(&doc)
 	}
@@ -167,7 +344,7 @@ func Updatedockpattern(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	//response := Structs.ResponsesSytem{}
 	res := ""
-	var requestdockpattern Structs.RequestDockpattern
+	var requestdockpattern RequestDockpattern
 	_ = json.NewDecoder(r.Body).Decode(&requestdockpattern)
 	Sqlconnectionmarlo("marlo")
 	var err error
@@ -176,11 +353,11 @@ func Updatedockpattern(w http.ResponseWriter, r *http.Request) {
 	_, err = db.Query("UPDATE document SET name = ?, description = ? WHERE (`id` = ?);", requestdockpattern.Name, requestdockpattern.Description, vars["id"])
 	if err != nil {
 		res = "Ошибка данных" + err.Error()
-		ResponsesUser(w, res)
+		ResponsesUserfunc(w, res)
 		return
 	}
 	res = "Данные успешно Обновленны"
-	ResponsesUser(w, res)
+	ResponsesUserfunc(w, res)
 }
 
 func Getdockstext(w http.ResponseWriter, r *http.Request) {
@@ -191,11 +368,15 @@ func Getdockstext(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	defer rows.Close()
+
+	docc := ResponsesDockstext{}
+	doc := []ResponsesDockstext{}
 	for rows.Next() {
-		doc := Structs.ResponsesDockstext{}
-		rows.Scan(&doc.Id, &doc.Id_doc, &doc.Text, &doc.Create_date, &doc.Lang, &doc.Uuid)
-		json.NewEncoder(w).Encode(&doc)
+		rows.Scan(&docc.Id, &docc.Id_doc, &docc.Text, &docc.Create_date, &docc.Lang, &docc.Uuid)
+		//json.NewEncoder(w).Encode(&doc)
+		doc = append(doc, docc)
 	}
+	json.NewEncoder(w).Encode(&doc)
 }
 
 func Getdockstextbydocid(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +389,7 @@ func Getdockstextbydocid(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		doc := Structs.ResponsesDockstext{}
+		doc := ResponsesDockstext{}
 		rows.Scan(&doc.Id, &doc.Id_doc, &doc.Text, &doc.Create_date, &doc.Lang, &doc.Uuid)
 		json.NewEncoder(w).Encode(&doc)
 
@@ -225,7 +406,7 @@ func Getdockstextbyid(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		doc := Structs.ResponsesDockstext{}
+		doc := ResponsesDockstext{}
 		rows.Scan(&doc.Id, &doc.Id_doc, &doc.Text, &doc.Create_date, &doc.Lang, &doc.Uuid)
 		json.NewEncoder(w).Encode(&doc)
 	}
@@ -243,7 +424,7 @@ func GetDocksTextActyality(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	for rows.Next() {
-		doc := Structs.ResponsesDockstext{}
+		doc := ResponsesDockstext{}
 		rows.Scan(&doc.Id, &doc.Id_doc, &doc.Text, &doc.Create_date, &doc.Lang, &doc.Uuid)
 		json.NewEncoder(w).Encode(&doc)
 	}
@@ -255,7 +436,7 @@ func AddDocksTextActyality(w http.ResponseWriter, r *http.Request) {
 	Sqlconnectionmarlo("marlo")
 	vars := mux.Vars(r)
 	//res := ""
-	var requestdockstext Structs.RequestDockstext
+	var requestdockstext RequestDockstext
 	_ = json.NewDecoder(r.Body).Decode(&requestdockstext)
 
 	var err error
@@ -267,7 +448,7 @@ func AddDocksTextActyality(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 	var id, _ = rows.LastInsertId()
 	res := "Данные успешно добавленны - id записи " + strconv.FormatInt(id, 10)
-	ResponsesUser(w, res)
+	ResponsesUserfunc(w, res)
 
 }
 
@@ -275,7 +456,7 @@ func UpdateStatusHandler(w http.ResponseWriter, r *http.Request) {
 	Sqlconnectionmarlo("admin")
 	vars := mux.Vars(r)
 	//res := ""
-	var requesthandler Structs.RequestHandler
+	var requesthandler RequestHandler
 	_ = json.NewDecoder(r.Body).Decode(&requesthandler)
 
 	var err error
@@ -287,12 +468,12 @@ func UpdateStatusHandler(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 	var id, _ = rows.LastInsertId()
 	res := "Данные хэндлера изменены - id изменённого хэнлера  " + strconv.FormatInt(id, 10)
-	ResponsesUser(w, res)
+	ResponsesUserfunc(w, res)
 }
 
 func InsertHandler(w http.ResponseWriter, r *http.Request) {
 	Sqlconnectionmarlo("admin")
-	var requestinserthandler Structs.RequestInsertHandler
+	var requestinserthandler RequestInsertHandler
 	_ = json.NewDecoder(r.Body).Decode(&requestinserthandler)
 
 	var err error
@@ -304,7 +485,7 @@ func InsertHandler(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 	var id, _ = rows.LastInsertId()
 	res := "Данные хэндлера добавленны - id созданного хэнлера  " + strconv.FormatInt(id, 10)
-	ResponsesUser(w, res)
+	ResponsesUserfunc(w, res)
 }
 
 func DeleteHandler(w http.ResponseWriter, r *http.Request) {
@@ -320,7 +501,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	var id, _ = rows.RowsAffected()
 
 	res := "Данные хэндлера удаленны или их не было, задейсвованно строк - " + strconv.FormatInt(id, 10)
-	ResponsesUser(w, res)
+	ResponsesUserfunc(w, res)
 }
 
 func GetHandler(w http.ResponseWriter, r *http.Request) {
@@ -333,8 +514,8 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	gethandarr := []Structs.RequestGetHandlers{}
-	gethand := Structs.RequestGetHandlers{}
+	gethandarr := []RequestGetHandlers{}
+	gethand := RequestGetHandlers{}
 
 	for rows.Next() {
 
@@ -354,8 +535,8 @@ func Apply_Changes(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	defer rows.Close()
-	gethandarr := []Structs.RequestGetHandlers{}
-	gethand := Structs.RequestGetHandlers{}
+	gethandarr := []RequestGetHandlers{}
+	gethand := RequestGetHandlers{}
 
 	for rows.Next() {
 
@@ -377,8 +558,8 @@ func Apply_Changes(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(&result)
 }
 
-func ResponsesUser(w http.ResponseWriter, res string) {
-	response := Structs.ResponsesSytem{}
+func ResponsesUserfunc(w http.ResponseWriter, res string) {
+	response := ResponsesSytem{}
 	w.Header().Set("Content-Type", "application/json")
 	response.Responses = res
 	json.NewEncoder(w).Encode(&response)

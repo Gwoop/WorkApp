@@ -27,7 +27,7 @@ func newClient(username string, serverPID *actor.PID) actor.Producer {
 func (c *client) Receive(ctx *actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case *types.Message:
-		fmt.Println("username: %s :: %s\n", msg.Username, msg.Msg)
+		fmt.Println("\n", msg.Username, msg.Msg)
 	case actor.Started:
 		ctx.Send(c.serverPID, &types.Connect{
 			Username: c.username,
@@ -37,6 +37,7 @@ func (c *client) Receive(ctx *actor.Context) {
 	}
 }
 
+// go run client/main.go -port :3001 -username=Test2
 func main() {
 	var (
 		port     = flag.String("port", ":3000", "")
@@ -48,8 +49,9 @@ func main() {
 		ListenAddr: "127.0.0.1" + *port,
 	})
 	e.WithRemote(rem)
-	serverPID := actor.NewPID("127.0.0.1:4000", "server")
+	serverPID := actor.NewPID("127.0.0.1:4001", "server")
 	clientPID := e.Spawn(newClient(*username, serverPID), "client")
+
 	r := bufio.NewReader(os.Stdin)
 	for {
 		str, err := r.ReadString('\n')

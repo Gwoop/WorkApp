@@ -1,6 +1,6 @@
-package Structs
+package main
 
-//СТруктура для создания тестового пользователя
+// СТруктура для создания тестового пользователя
 type User struct {
 	Name     string //Имя
 	Lastname string //Фамилия
@@ -12,21 +12,26 @@ type User struct {
 	Password string //Пароль
 }
 
-//Структура ответа для создания пользоватлей
+// Структура ответа для создания пользоватлей
 type ResponsesUser struct {
 	Id       int64  `json:"id"`
 	Login    string `json:"login"`
 	Password string `json:"password"`
 }
 
-//Структура для авторизации админа
+type Responses struct {
+	Procent string `json:"procent"`
+}
+
+// Структура для авторизации админа
 type Admin struct {
 	Id       int
 	Login    string
 	Password string
+	Token    string
 }
 
-//Структура ответа для просмотра всех шаблонов документов
+// Структура ответа для просмотра всех шаблонов документов
 type ResponsesDockpattern struct {
 	Id          int64  `json:"id"`
 	Name        string `json:"name"`
@@ -35,13 +40,13 @@ type ResponsesDockpattern struct {
 	Create_date string `json:"create_date"`
 }
 
-//Структура запроса для создания шаблона документа также эта структура используется для обновления
+// Структура запроса для создания шаблона документа также эта структура используется для обновления
 type RequestDockpattern struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
-//Структура запроса через Id
+// Структура запроса через Id
 type RequestDockid struct {
 	Id int `json:"id"`
 }
@@ -50,12 +55,12 @@ type RequestsearchDock struct {
 	Namedoc string `json:"namedoc"`
 }
 
-//Структура для вывода статуса операции, ошибках и т.д
+// Структура для вывода статуса операции, ошибках и т.д
 type ResponsesSytem struct {
 	Responses string `json:"responses"`
 }
 
-//Стуктура ответа для просмотра текстов документов
+// Стуктура ответа для просмотра текстов документов
 type ResponsesDockstext struct {
 	Id          int64  `json:"id"`
 	Id_doc      int64  `json:"id_doc"`
@@ -65,7 +70,7 @@ type ResponsesDockstext struct {
 	Uuid        string `json:"uuid"`
 }
 
-//Стуктура ответа для просмотра текстов документов
+// Стуктура ответа для просмотра текстов документов
 type RequestDockstext struct {
 	Text string `json:"text"`
 	Lang string `json:"lang"`

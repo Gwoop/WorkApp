@@ -45,7 +45,7 @@ func main() {
 	log.SetLevel(log.LevelInfo)
 	e := actor.NewEngine()
 	rem := remote.New(e, remote.Config{
-		ListenAddr: "127.0.0.1:4000",
+		ListenAddr: "127.0.0.1:4001",
 	})
 	e.WithRemote(rem)
 	e.Spawn(newServer, "server")

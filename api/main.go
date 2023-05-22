@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -22,27 +20,6 @@ var (
 	db          *sql.DB
 )
 
-func Init() {
-	var filearray [6]string
-	file, err := os.Open("config.txt")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	i := 0
-	for scanner.Scan() {
-		filearray[i] = scanner.Text()
-		i++
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-	PortHandler = filearray[0]
-	Handler = filearray[1]
-	PathBD = filearray[2]
-}
-
 type Testst struct {
 	Resposnse string `json:"resposnse"`
 }
@@ -52,27 +29,31 @@ func Test(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	Init()
 	fmt.Println("Запущенно")
 	r := mux.NewRouter()
-	r.HandleFunc("/marlo/test", Test).Methods("Get")
-	r.HandleFunc("/marlo/admin/adduser", AuthorizationAdmin(AddUser)).Methods("Get")                             // добавление тестовых пользователей
-	r.HandleFunc("/marlo/admin/getdocpattern", AuthorizationAdmin(Getdockspattern)).Methods("Get")               // получения списка шаблонов
-	r.HandleFunc("/marlo/admin/adddocpattern", AuthorizationAdmin(Adddockpattern)).Methods("Post")               // создание шаблона
-	r.HandleFunc("/marlo/admin/deletedocpattern/{id}/", AuthorizationAdmin(Deletedockpattern)).Methods("Delete") // удаление шаблона
-	r.HandleFunc("/marlo/admin/searchdockspattern", AuthorizationAdmin(Searchdockspattern)).Methods("Get")       // поиск шаблонов
-	r.HandleFunc("/marlo/admin/updatedockpattern/{id}/", AuthorizationAdmin(Updatedockpattern)).Methods("Put")   //обновление шаблона
-	r.HandleFunc("/marlo/admin/getdockstext", AuthorizationAdmin(Getdockstext)).Methods("Get")
-	r.HandleFunc("/marlo/admin/getdockstextbydocid/{id}/", AuthorizationAdmin(Getdockstextbydocid)).Methods("Get")
-	r.HandleFunc("/marlo/admin/getdockstextbyid/{id}/", AuthorizationAdmin(Getdockstextbyid)).Methods("Get")
-	r.HandleFunc("/marlo/admin/getdockstextactyality/{id}/", AuthorizationAdmin(GetDocksTextActyality)).Methods("Get")
-	r.HandleFunc("/marlo/admin/adddockstextactyality/{id}/", AuthorizationAdmin(AddDocksTextActyality)).Methods("Post")
-	r.HandleFunc("/marlo/admin/update_status_handler/{name_handler}/", AuthorizationAdmin(UpdateStatusHandler)).Methods("PUT")
-	r.HandleFunc("/marlo/admin/insert_handler/", AuthorizationAdmin(InsertHandler)).Methods("Post")
-	r.HandleFunc("/marlo/admin/delete_handler/{id_handler}", AuthorizationAdmin(DeleteHandler)).Methods("Delete")
-	r.HandleFunc("/marlo/admin/get_handler", AuthorizationAdmin(GetHandler)).Methods("Get")
-	r.HandleFunc("/marlo/admin/apply_changes", AuthorizationAdmin(Apply_Changes)).Methods("Post")
+	r.HandleFunc("/test", Test).Methods("Get")
+	r.HandleFunc("/admin/authorization", AuthorizationAdmin(AuthorizationReturn)).Methods("Get")           // проверка авторизации
+	r.HandleFunc("/admin/adduser", AuthorizationAdmin(AddUser)).Methods("Get")                             // добавление тестовых пользователей
+	r.HandleFunc("/admin/getdocpattern", AuthorizationAdmin(Getdockspattern)).Methods("Get")               // получения списка шаблонов
+	r.HandleFunc("/admin/adddocpattern", AuthorizationAdmin(Adddockpattern)).Methods("Post")               // создание шаблона
+	r.HandleFunc("/admin/deletedocpattern/{id}/", AuthorizationAdmin(Deletedockpattern)).Methods("Delete") // удаление шаблона
+	r.HandleFunc("/admin/searchdockspattern", AuthorizationAdmin(Searchdockspattern)).Methods("Get")       // поиск шаблонов
+	r.HandleFunc("/admin/updatedockpattern/{id}/", AuthorizationAdmin(Updatedockpattern)).Methods("Put")   //обновление шаблона
+	r.HandleFunc("/admin/getdockstext", AuthorizationAdmin(Getdockstext)).Methods("Get")
+	r.HandleFunc("/admin/getdockstextbydocid/{id}/", AuthorizationAdmin(Getdockstextbydocid)).Methods("Get")
+	r.HandleFunc("/admin/getdockstextbyid/{id}/", AuthorizationAdmin(Getdockstextbyid)).Methods("Get")
+	r.HandleFunc("/admin/getdockstextactyality/{id}/", AuthorizationAdmin(GetDocksTextActyality)).Methods("Get")
+	r.HandleFunc("/admin/adddockstextactyality/{id}/", AuthorizationAdmin(AddDocksTextActyality)).Methods("Post")
+	r.HandleFunc("/admin/update_status_handler/{name_handler}/", AuthorizationAdmin(UpdateStatusHandler)).Methods("PUT")
+	r.HandleFunc("/admin/insert_handler/", AuthorizationAdmin(InsertHandler)).Methods("Post")
+	r.HandleFunc("/admin/delete_handler/{id_handler}", AuthorizationAdmin(DeleteHandler)).Methods("Delete")
+	r.HandleFunc("/admin/get_handler", AuthorizationAdmin(GetHandler)).Methods("Get")
+	r.HandleFunc("/admin/apply_changes", AuthorizationAdmin(Apply_Changes)).Methods("Post")
+	r.HandleFunc("/admin/testingbd/{sost}/{proc}", AuthorizationAdmin(Testingbd)).Methods("Post")
+	r.HandleFunc("/admin/closetesting/{sost}/", AuthorizationAdmin(CloseTesting)).Methods("Post")
+	r.HandleFunc("/admin/statusBD", AuthorizationAdmin(GetHardwareData)).Methods("GET")
 	r.Use(loggingMiddleware)
+	//r.Use(AutorizeihenMiddleware)
 	err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		pathTemplate, err := route.GetPathTemplate()
 		if err == nil {
@@ -102,7 +83,7 @@ func main() {
 	}
 
 	s := &http.Server{
-		Addr:           ":8000",
+		Addr:           "192.168.0.18:8000",
 		Handler:        r,
 		ReadTimeout:    5 * time.Second,
 		WriteTimeout:   5 * time.Second,
@@ -116,17 +97,18 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Базовый лог, в дальнейшем буду делать более подробным
 		log.Println(r.RequestURI)
+
 		next.ServeHTTP(w, r)
 	})
 }
 
-func AutorizeihenMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Базовый лог, в дальнейшем буду делать более подробным
-		log.Println(r.RequestURI)
-		next.ServeHTTP(w, r)
-	})
-}
+//func AutorizeihenMiddleware(next http.Handler) http.Handler {
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		// Базовый лог, в дальнейшем буду делать более подробным
+//		log.Println(r.RequestURI)
+//		next.ServeHTTP(w, r)
+//	})
+//}
 
 func Sqlconnectionmarlo(namebd string) {
 	//"root:1234@tcp(localhost:3306)/admin"

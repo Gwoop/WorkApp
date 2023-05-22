@@ -1,1 +1,5 @@
-package Handlertesting
+package main
+
+func main() {
+
+}
